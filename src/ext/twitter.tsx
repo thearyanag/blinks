@@ -115,6 +115,11 @@ async function handleNewNode(
   let anchor;
 
   const linkPreview = findLinkPreview(element);
+  const likeButton = findBookmarkButton(element);
+
+  if (likeButton) {
+    likeButton.append(createDropdown(likeButton));
+  }
 
   let container = findContainerInTweet(
     linkPreview?.card ?? element,
@@ -206,6 +211,191 @@ async function handleNewNode(
       isInterstitial: interstitialData.isInterstitial,
     }),
   );
+}
+
+function createDropdown(likeButton: HTMLElement) {
+  const dropdownContainer = document.createElement('div');
+  dropdownContainer.className = 'dialect-dropdown-container';
+  dropdownContainer.style.display = 'inline-flex';
+  dropdownContainer.style.alignItems = 'center';
+  dropdownContainer.style.marginLeft = '8px';
+  dropdownContainer.style.position = 'relative';
+
+  // Create SVG icon
+  const svgIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svgIcon.setAttribute('viewBox', '0 0 24 24');
+  svgIcon.setAttribute('width', '18');
+  svgIcon.setAttribute('height', '18');
+  svgIcon.style.fill = 'currentColor';
+  svgIcon.innerHTML = `
+    <path d="M3 12c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm9 2c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm7 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"/>
+  `;
+
+  // Create custom dropdown
+  const customDropdown = document.createElement('div');
+  customDropdown.className = 'dialect-custom-dropdown';
+  customDropdown.style.display = 'inline-flex';
+  customDropdown.style.alignItems = 'center';
+  customDropdown.style.cursor = 'pointer';
+  customDropdown.style.padding = '6px';
+  customDropdown.style.borderRadius = '50%';
+  customDropdown.style.transition = 'background-color 0.2s';
+
+  customDropdown.appendChild(svgIcon);
+
+  // Create options container
+  const optionsContainer = document.createElement('div');
+  optionsContainer.className = 'dialect-options-container';
+  optionsContainer.style.display = 'none';
+  optionsContainer.style.position = 'absolute';
+  optionsContainer.style.bottom = '100%';
+  optionsContainer.style.right = '0';
+  optionsContainer.style.backgroundColor = 'blue';
+  optionsContainer.style.border = '1px solid #ccc';
+  optionsContainer.style.borderRadius = '4px';
+  optionsContainer.style.boxShadow = '0 -2px 10px rgba(0,0,0,0.1)';
+  optionsContainer.style.zIndex = '1000';
+  optionsContainer.style.marginBottom = '10px';
+  optionsContainer.style.minWidth = '200px';
+  optionsContainer.style.maxHeight = '300px';
+  optionsContainer.style.overflowY = 'auto';
+  optionsContainer.style.overflowX = 'hidden';
+
+  // Prevent scroll propagation
+  optionsContainer.addEventListener(
+    'wheel',
+    (event) => {
+      event.stopPropagation();
+      const { scrollTop, scrollHeight, clientHeight } = optionsContainer;
+      if (
+        (scrollTop === 0 && event.deltaY < 0) ||
+        (scrollTop + clientHeight === scrollHeight && event.deltaY > 0)
+      ) {
+        event.preventDefault();
+      }
+    },
+    { passive: false },
+  );
+
+  // Handle touch scrolling
+  let touchStartY = 0;
+  optionsContainer.addEventListener(
+    'touchstart',
+    (event) => {
+      touchStartY = event.touches[0].clientY;
+    },
+    { passive: true },
+  );
+
+  optionsContainer.addEventListener(
+    'touchmove',
+    (event) => {
+      if (!touchStartY) {
+        return;
+      }
+      const touchY = event.touches[0].clientY;
+      const { scrollTop, scrollHeight, clientHeight } = optionsContainer;
+      if (
+        (scrollTop === 0 && touchY > touchStartY) ||
+        (scrollTop + clientHeight === scrollHeight && touchY < touchStartY)
+      ) {
+        event.preventDefault();
+      }
+      event.stopPropagation();
+    },
+    { passive: false },
+  );
+
+  // Add detailed options
+  const options = [
+    {
+      name: 'Access Protocol',
+      description: 'gate your content',
+      verified: 'Yes',
+      act: 'access-protocol.dial.to',
+    },
+    {
+      name: 'Arkenstone Suite',
+      description: 'developing a token presale Suite',
+      verified: 'No',
+      act: 'arkenstone.gold',
+    },
+    {
+      name: 'Blinks',
+      description: 'Blinks Inspector',
+      verified: 'Yes',
+      act: 'blinks.gg',
+    },
+    {
+      name: 'Sol Casino',
+      description: 'Roulette on Solana',
+      verified: 'Yes',
+      act: 'solcasino.io',
+    },
+  ];
+
+  options.forEach((optionData) => {
+    const option = document.createElement('div');
+    option.style.padding = '12px';
+    option.style.borderBottom = '1px solid #eee';
+    option.style.cursor = 'pointer';
+    option.style.transition = 'background-color 0.2s';
+
+    const content = `
+      <div style="font-weight: bold;">Name: ${optionData.name}</div>
+      <div>Description: ${optionData.description}</div>
+      <div>Verified: ${optionData.verified}</div>
+      <div>Act: ${optionData.act}</div>
+    `;
+    option.innerHTML = content;
+
+    option.addEventListener('mouseenter', () => {
+      option.style.backgroundColor = '#f0f0f0';
+    });
+
+    option.addEventListener('mouseleave', () => {
+      option.style.backgroundColor = 'transparent';
+    });
+
+    option.addEventListener('click', (event) => {
+      event.stopPropagation();
+      console.log('Selected option:', optionData);
+      optionsContainer.style.display = 'none';
+    });
+
+    optionsContainer.appendChild(option);
+  });
+
+  customDropdown.appendChild(optionsContainer);
+
+  // Event listeners (same as before)
+  customDropdown.addEventListener('click', (event) => {
+    event.stopPropagation();
+    optionsContainer.style.display =
+      optionsContainer.style.display === 'none' ? 'block' : 'none';
+  });
+
+  customDropdown.addEventListener('mouseenter', () => {
+    customDropdown.style.backgroundColor = 'rgba(29, 155, 240, 0.1)';
+  });
+
+  customDropdown.addEventListener('mouseleave', () => {
+    customDropdown.style.backgroundColor = 'transparent';
+  });
+
+  document.addEventListener('click', () => {
+    optionsContainer.style.display = 'none';
+  });
+
+  dropdownContainer.appendChild(customDropdown);
+
+  // Insert the dropdown container after the like button
+  likeButton.parentNode?.insertBefore(
+    dropdownContainer,
+    likeButton.nextSibling,
+  );
+
+  return dropdownContainer;
 }
 
 function createAction({
@@ -303,6 +493,26 @@ function findLastLinkInText(element: Element) {
     return { anchor, tweetText };
   }
   return null;
+}
+
+function findBookmarkButton(element: Element) {
+  // First, try to find the tweet container
+  const tweet = element.closest('[data-testid="tweet"]');
+  if (!tweet) return null;
+
+  const likeButton = tweet.querySelector('[data-testid="bookmark"]');
+  if (!likeButton) return null;
+
+  const likeButtonParent = likeButton.parentElement;
+  if (!likeButtonParent) return null;
+
+  if (likeButtonParent.hasAttribute('data-dialect-processed')) {
+    return null; // We've already processed this button, so return null
+  }
+
+  likeButtonParent.setAttribute('data-dialect-processed', 'true');
+
+  return likeButtonParent as HTMLElement;
 }
 
 function getContainerForLink(tweetText: Element) {
