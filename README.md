@@ -1,5 +1,11 @@
 # @dialectlabs/blinks &mdash; the [Actions](https://github.com/dialectlabs/actions) Interface
 
+## This is only for local testing, this renders all the blinks regardless of there verified status ( you can search `testing only` in the repo to find the changes )
+
+## How to use locally
+- run `bun link` to register the repo locally
+- in the package where you want to use this, just run `bun link @dialectlabs/blinks`
+
 ## Usage
 ### Style Presets & Overriding Theme
 
