@@ -1,4 +1,4 @@
-import { proxify, proxifyImage } from '../../utils/proxify.ts';
+import { proxify, proxifyMedia } from '../../utils/proxify.ts';
 import type { ActionAdapter } from '../ActionConfig.ts';
 import type {
   ActionGetResponse,
@@ -48,11 +48,22 @@ export class Action {
     return this._url;
   }
 
-  public get icon() {
-    if (this._data.icon.startsWith('data:')) {
-      return this._data.icon;
+  // public get icon() {
+  //   if (this._data.icon.startsWith('data:')) {
+  //     return this._data.icon;
+  //   }
+  //   return proxifyImage(this._data.icon).toString();
+  // }
+
+  public get media() {
+    if (this._data.media?.startsWith('data:')) {
+      return this._data.media;
     }
-    return proxifyImage(this._data.icon).toString();
+    return proxifyMedia(this._data.media ?? '').toString();
+  }
+
+  public get mediaType() {
+    return this._data.mediaType;
   }
 
   public get title() {

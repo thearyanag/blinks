@@ -49,7 +49,8 @@ const stylePresetClassMap: Record<StylePreset, string> = {
 
 interface LayoutProps {
   stylePreset?: StylePreset;
-  image?: string;
+  media?: string;
+  mediaType?: string;
   error?: string | null;
   success?: string | null;
   websiteUrl?: string | null;
@@ -166,7 +167,8 @@ export const ActionLayout = ({
   stylePreset = 'default',
   title,
   description,
-  image,
+  media,
+  mediaType = 'video',
   websiteUrl,
   websiteText,
   type,
@@ -180,18 +182,31 @@ export const ActionLayout = ({
   return (
     <div className={clsx('blink', stylePresetClassMap[stylePreset])}>
       <div className="w-full cursor-default overflow-hidden rounded-2xl border border-stroke-primary bg-bg-primary shadow-action">
-        {image && (
+        {media && (
           <Linkable
             url={websiteUrl}
             className="block max-h-[100cqw] overflow-y-hidden px-5 pt-5"
           >
-            <img
-              className={clsx(
-                'aspect-auto w-full rounded-xl object-cover object-center',
-              )}
-              src={image}
-              alt="action-image"
-            />
+            {mediaType == 'video' ? (
+              <video
+                className={clsx(
+                  'aspect-auto w-full rounded-xl object-cover object-center',
+                )}
+                src={media}
+                controls
+                autoPlay
+              >
+                Your browser does not support the video tag.
+              </video>
+            ) : (
+              <img
+                className={clsx(
+                  'aspect-auto w-full rounded-xl object-cover object-center',
+                )}
+                src={media}
+                alt="action-image"
+              />
+            )}
           </Linkable>
         )}
         <div className="flex flex-col p-5">

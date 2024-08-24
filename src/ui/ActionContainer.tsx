@@ -477,7 +477,8 @@ export const ActionContainer = ({
       description={action.description}
       websiteUrl={websiteUrl}
       websiteText={websiteText}
-      image={action.icon}
+      media={action.media}
+      mediaType={action.mediaType}
       error={
         executionState.status !== 'success'
           ? (executionState.errorMessage ?? action.error)
