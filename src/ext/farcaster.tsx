@@ -63,19 +63,19 @@ const normalizeOptions = (
   };
 };
 
-export function setupTwitterObserver(
+export function setupFarcasterObserver(
   config: ActionAdapter,
   callbacks: Partial<ActionCallbacksConfig> = {},
   options: Partial<ObserverOptions> = DEFAULT_OPTIONS,
 ) {
   const mergedOptions = normalizeOptions(options);
-  const twitterReactRoot = document.getElementById('react-root')!;
+  const farcasterRoot = document.getElementById('root')!;
 
-  if (!twitterReactRoot) {
-    console.log('Twitter root not found');
+  if (!farcasterRoot) {
+    console.log('Farcaster root not found');
     return;
   } else {
-    console.log('Twitter root found');
+    console.log('Farcaster root found');
   }
 
   const refreshRegistry = async () => {
@@ -93,6 +93,7 @@ export function setupTwitterObserver(
           const node = mutation.addedNodes[j];
           if (node.nodeType !== Node.ELEMENT_NODE) {
             return;
+            // continue;
           }
           handleNewNode(
             node as Element,
@@ -104,7 +105,7 @@ export function setupTwitterObserver(
       }
     });
 
-    observer.observe(twitterReactRoot, { childList: true, subtree: true });
+    observer.observe(farcasterRoot, { childList: true, subtree: true });
   });
 }
 async function handleNewNode(
@@ -119,11 +120,28 @@ async function handleNewNode(
     return;
   }
 
+  // farcaster element has 2 types
+  // 1. div(.' fade-in') = when the page loads, an initial set of casts are loaded
+  // 2. div(.relative) under another div = when a new cast is loaded when scrolling
+
+  // so we need to check if the element is either of the above
+  if (
+    !element.className.includes(' fade-in') &&
+    !element.className.includes('relative')
+  ) {
+    return;
+  }
+
+  // does not work with space
+  // console.log("element.classList.contains(' fade-in')", element.classList.contains(' fade-in'));
+
+  console.log('handleNewNode', element);
+
   let anchor;
 
   const linkPreview = findLinkPreview(element);
 
-  let container = findContainerInTweet(
+  let container = findContainerInCast(
     linkPreview?.card ?? element,
     Boolean(linkPreview),
   );
@@ -132,20 +150,15 @@ async function handleNewNode(
     container && container.remove();
     container = linkPreview.card.parentElement as HTMLElement;
   } else {
-    if (container) {
-      return;
-    }
-    const link = findLastLinkInText(element);
-    if (link) {
-      anchor = link.anchor;
-      container = getContainerForLink(link.tweetText);
-    }
+    container = getContainerForLink(element);
   }
+
+  // need the anchor and container
 
   if (!anchor || !container) return;
 
-  const shortenedUrl = anchor.href;
-  const actionUrl = await resolveTwitterShortenedUrl(shortenedUrl);
+  // as fc does not shortens the URL like twitter
+  const actionUrl = new URL(anchor.href);
   const interstitialData = isInterstitial(actionUrl);
 
   let actionApiUrl: string | null;
@@ -259,14 +272,14 @@ const resolveXStylePreset = (): StylePreset => {
   return prefersDark ? 'x-dark' : 'x-light';
 };
 
-async function resolveTwitterShortenedUrl(shortenedUrl: string): Promise<URL> {
-  const res = await fetch(shortenedUrl);
-  const html = await res.text();
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
-  const actionUrl = doc.querySelector('title')?.textContent;
-  return new URL(actionUrl!);
-}
+// async function resolveTwitterShortenedUrl(shortenedUrl: string): Promise<URL> {
+//   const res = await fetch(shortenedUrl);
+//   const html = await res.text();
+//   const parser = new DOMParser();
+//   const doc = parser.parseFromString(html, 'text/html');
+//   const actionUrl = doc.querySelector('title')?.textContent;
+//   return new URL(actionUrl!);
+// }
 
 function findElementByTestId(element: Element, testId: string) {
   if (element.attributes.getNamedItem('data-testid')?.value === testId) {
@@ -275,10 +288,9 @@ function findElementByTestId(element: Element, testId: string) {
   return element.querySelector(`[data-testid="${testId}"]`);
 }
 
-function findContainerInTweet(element: Element, searchUp?: boolean) {
+function findContainerInCast(element: Element, searchUp?: boolean) {
   const message = searchUp
-    ? (element.closest(`[data-testid="tweet"]`) ??
-      element.closest(`[data-testid="messageEntry"]`))
+    ? (element.closest(`a`) ?? element.closest(`[data-testid="messageEntry"]`))
     : (findElementByTestId(element, 'tweet') ??
       findElementByTestId(element, 'messageEntry'));
 
@@ -288,39 +300,31 @@ function findContainerInTweet(element: Element, searchUp?: boolean) {
   return null;
 }
 
+// it will iterate through the children of the card and find the anchor tag
 function findLinkPreview(element: Element) {
-  const card = findElementByTestId(element, 'card.wrapper');
-  if (!card) {
-    return null;
-  }
+  // const card = findElementByTestId(element, 'card.wrapper');
+  // if (!card) {
+  //   return null;
+  // }
 
-  const anchor = card.children[0]?.children[0] as HTMLAnchorElement;
+  // const anchor = card.children[0]?.children[0] as HTMLAnchorElement;
+
+  const card = element;
+
+  const anchor = card.querySelector('a') as HTMLAnchorElement;
 
   return anchor ? { anchor, card } : null;
 }
-function findLastLinkInText(element: Element) {
-  const tweetText = findElementByTestId(element, 'tweetText');
-  if (!tweetText) {
-    return null;
-  }
 
-  const links = tweetText.getElementsByTagName('a');
-  if (links.length > 0) {
-    const anchor = links[links.length - 1] as HTMLAnchorElement;
-    return { anchor, tweetText };
-  }
-  return null;
-}
-
-function getContainerForLink(tweetText: Element) {
+function getContainerForLink(castText: Element) {
   const root = document.createElement('div');
   root.className = 'dialect-wrapper';
-  const dm = tweetText.closest(`[data-testid="messageEntry"]`);
+  const dm = castText.closest(`[class="relative"]`);
   if (dm) {
     root.classList.add('dialect-dm');
-    tweetText.parentElement?.parentElement?.prepend(root);
+    castText.parentElement?.parentElement?.prepend(root);
   } else {
-    tweetText.parentElement?.append(root);
+    castText.parentElement?.append(root);
   }
   return root;
 }
